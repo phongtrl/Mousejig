@@ -2,6 +2,8 @@ package io.github.phongtrl.mousejig;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -14,10 +16,12 @@ import androidx.webkit.WebViewAssetLoader;
 public class MainActivity extends Activity {
     private WebView web;
     private boolean foreground;
+    private Vibrator vibrator;
 
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
+        vibrator = getSystemService(Vibrator.class);
         web = new WebView(this);
         web.setBackgroundColor(0xfff7f8f3);
         setContentView(web);
@@ -53,6 +57,20 @@ public class MainActivity extends Activity {
 
     final class PowerControl {
         @JavascriptInterface
+        public boolean hasVibrator() {
+            return vibrator != null && vibrator.hasVibrator();
+        }
+
+        @JavascriptInterface
+        public void pulse(boolean enabled) {
+            runOnUiThread(() -> {
+                if (!hasVibrator()) return;
+                if (enabled && foreground) vibrator.vibrate(VibrationEffect.createOneShot(350, 255));
+                else vibrator.cancel();
+            });
+        }
+
+        @JavascriptInterface
         public void keepAwake(boolean enabled) {
             runOnUiThread(() -> web.setKeepScreenOn(foreground && enabled));
         }
@@ -68,6 +86,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         foreground = false;
+        if (vibrator != null) vibrator.cancel();
         web.setKeepScreenOn(false);
         web.evaluateJavascript("window.mousejig && window.mousejig.suspend()", null);
         web.onPause();

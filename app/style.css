@@ -50,7 +50,7 @@ h1, h2, p { margin: 0; }
 .test span { margin-left: 4px; }
 fieldset { border: 0; margin: 19px 0 0; padding: 0; min-width: 0; }
 legend { padding: 0; font-size: 15px; font-weight: 720; margin-bottom: 8px; }
-.segments { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 2px; background: #e9ece3; border: 1px solid #e0e4d9; padding: 3px; border-radius: 12px; }
+.segments { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 2px; background: #e9ece3; border: 1px solid #e0e4d9; padding: 3px; border-radius: 12px; }
 .segments label { position: relative; cursor: pointer; }
 .segments input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
 .segments span { display: grid; place-items: center; min-height: 39px; padding: 2px 3px; text-align: center; border-radius: 8px; color: #4c554a; font-size: 14px; font-weight: 580; }
@@ -80,3 +80,8 @@ dialog ol { padding-left: 23px; line-height: 1.5; font-size: 15px; }
 dialog li { padding-left: 3px; margin: 0 0 12px; }
 dialog p { color: var(--muted); font-size: 14px; line-height: 1.45; }
 @media (min-width: 620px) and (min-height: 680px) { .shell { padding-top: 26px; } }
+
+.placement { padding: 20px; line-height: 1.4; }
+#vibrationPreview { min-height: clamp(106px, 18vh, 169px); display: grid; align-content: center; }
+#vibrationPlacement { flex: 1; display: grid; align-content: center; font-size: 19px; }
+dialog p + p { margin-top: 10px; }

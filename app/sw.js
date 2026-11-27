@@ -1,9 +1,13 @@
 'use strict';
 
-const CACHE = 'mousejig-pad-v1';
+const CACHE = 'mousejig-pad-v2';
 const files = ['./', 'index.html', 'style.css', 'app.js', 'pad.js', 'icon.png', 'manifest.webmanifest', 'fonts/dm-sans.woff'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(files)));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.addAll(files.map(url => new Request(url, { cache: 'reload' })));
+    await self.skipWaiting();
+  })());
 });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {

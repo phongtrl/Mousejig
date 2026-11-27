@@ -5,11 +5,11 @@
 const pad = (() => {
   const surface = document.querySelector('#surface');
   const preview = document.querySelector('#previewCanvas');
-  let pattern;
+  const patterns = new Map();
 
   function fit(canvas) {
     const bounds = canvas.getBoundingClientRect();
-    const scale = Math.min(window.devicePixelRatio || 1, 3);
+    const scale = Math.min(window.devicePixelRatio || 1, 4);
     const width = Math.round(bounds.width * scale);
     const height = Math.round(bounds.height * scale);
     if (canvas.width !== width || canvas.height !== height) {
@@ -18,10 +18,10 @@ const pad = (() => {
     }
     const ctx = canvas.getContext('2d', { alpha: false });
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    return { ctx, width: bounds.width, height: bounds.height };
+    return { ctx, width: bounds.width, height: bounds.height, scale };
   }
 
-  function makePattern(ctx) {
+  function makePattern(ctx, method) {
     const tile = document.createElement('canvas');
     tile.width = tile.height = 192;
     const ink = tile.getContext('2d');
@@ -30,31 +30,32 @@ const pad = (() => {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
       return seed / 4294967296;
     };
-    ink.fillStyle = '#e5ebdb';
-    ink.fillRect(0, 0, 192, 192);
-    for (let y = 0; y < 192; y += 3) {
-      for (let x = 0; x < 192; x += 3) {
-        const shade = random();
-        if (shade < 0.44) {
-          ink.fillStyle = shade < 0.28 ? '#202721' : '#77846e';
-          ink.fillRect(x, y, random() < 0.3 ? 6 : 3, 3);
-        }
+    ink.fillStyle = '#fff';
+    ink.fillRect(0, 0, tile.width, tile.height);
+    ink.fillStyle = '#000';
+    // Irregular edges in both directions give the sensor landmarks. Sizes
+    // are backing pixels so small features stay sharp on dense phone screens.
+    const rowHeight = method === 'bars' ? 8 : 2;
+    for (let y = 0; y < tile.height; y += rowHeight) {
+      let x = -Math.floor(random() * rowHeight);
+      while (x < tile.width) {
+        const length = rowHeight * (1 + Math.floor(random() * 3));
+        ink.fillRect(x, y, length, rowHeight);
+        x += length + rowHeight * (1 + Math.floor(random() * 3));
       }
     }
     return ctx.createPattern(tile, 'repeat');
   }
 
-  function drawSurface(fraction) {
-    const { ctx, width, height } = fit(surface);
+  function drawSurface(method, position) {
+    const { ctx, width, height, scale } = fit(surface);
     if (!width || !height) return;
-    if (!pattern) pattern = makePattern(ctx);
-    // A gentle out-and-back movement returns the texture to its starting point.
-    const distance = (1 - Math.cos(2 * Math.PI * fraction)) / 2;
-    const x = Math.round(distance * 22);
-    const y = Math.round(distance * 8);
-    ctx.translate(x, y);
-    ctx.fillStyle = pattern;
-    ctx.fillRect(-x, -y, width + 1, height + 1);
+    if (!patterns.has(method)) patterns.set(method, makePattern(ctx, method));
+    const x = Math.round(position * 40 * scale);
+    const y = Math.round(position * 14 * scale);
+    ctx.setTransform(1, 0, 0, 1, x, y);
+    ctx.fillStyle = patterns.get(method);
+    ctx.fillRect(-x, -y, surface.width, surface.height);
   }
 
   function drawPreview() {
