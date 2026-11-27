@@ -6,7 +6,7 @@ const settings = document.querySelector('#settings');
 const guide = document.querySelector('#guide');
 const notice = document.querySelector('#notice');
 const clock = document.querySelector('#clock');
-const burstMs = 960;
+const burstMs = 700;
 const testMs = 8000;
 let active = null;
 let frame = 0;
@@ -43,17 +43,43 @@ function keepAwake(enabled) {
   }
 }
 
+function supportsVibration() {
+  if (window.MousejigPower) return Boolean(window.MousejigPower.hasVibrator?.());
+  if (window.webkit?.messageHandlers?.power) return Boolean(window.webkit.messageHandlers.pulse);
+  return typeof navigator.vibrate === 'function';
+}
+
+function vibrate(enabled) {
+  if (window.MousejigPower) {
+    window.MousejigPower.pulse(enabled);
+  } else if (window.webkit?.messageHandlers?.pulse) {
+    if (enabled) window.webkit.messageHandlers.pulse.postMessage(true);
+  } else {
+    return navigator.vibrate(enabled ? 350 : 0);
+  }
+  return true;
+}
+
+function updatePlacement() {
+  const vibrating = settings.elements.method.value === 'vibrate';
+  document.querySelector('#vibrationPreview').hidden = !vibrating;
+  document.querySelector('#previewCanvas').hidden = vibrating;
+  if (!vibrating) pad.drawPreview();
+}
+
 function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem('mousejig-settings') || '{}');
     for (const input of settings.querySelectorAll('input')) {
-      if (saved[input.name] === input.value) input.checked = true;
+      if (!input.disabled && saved[input.name] === input.value) input.checked = true;
     }
   } catch { /* Storage is optional. The controls have built-in defaults. */ }
 }
 settings.addEventListener('change', () => {
+  updatePlacement();
   try {
     localStorage.setItem('mousejig-settings', JSON.stringify({
+      method: settings.elements.method.value,
       interval: settings.elements.interval.value,
       duration: settings.elements.duration.value
     }));
@@ -70,6 +96,7 @@ function formatTime(ms) {
 function stop(message) {
   if (!active) return;
   const trigger = active.trigger;
+  if (active.method === 'vibrate') vibrate(false);
   active = null;
   cancelAnimationFrame(frame);
   clearTimeout(timeout);
@@ -77,7 +104,7 @@ function stop(message) {
   session.hidden = true;
   home.hidden = false;
   notice.textContent = message;
-  pad.drawPreview();
+  updatePlacement();
   trigger.focus();
 }
 
@@ -85,38 +112,59 @@ function render() {
   const now = performance.now();
   const elapsed = now - active.start;
   if (elapsed >= active.duration) {
-    stop(active.test ? 'Test finished. If the PC pointer moved, your mouse can use the pad.' : 'Session complete.');
+    stop(active.test ? 'Test finished. If the pointer stayed still, choose another movement and test again.' : 'Session complete.');
     return;
   }
   const phase = elapsed % active.interval;
   const timed = Number.isFinite(active.duration);
   const clockText = timed ? formatTime(Math.ceil((active.duration - elapsed) / 1000) * 1000) + ' left' : formatTime(elapsed) + ' elapsed';
   if (clock.textContent !== clockText) clock.textContent = clockText;
-  if (phase < burstMs) {
-    pad.drawSurface(phase / burstMs);
-    active.moving = true;
-    frame = requestAnimationFrame(render);
+  const cycle = Math.floor(elapsed / active.interval);
+  if (active.method === 'vibrate') {
+    if (cycle !== active.lastPulse) {
+      active.lastPulse = cycle;
+      if (!vibrate(true)) {
+        stop('Vibration was unavailable. Choose Fine grain or Wide bars to test the screen.');
+        return;
+      }
+    }
   } else {
-    if (active.moving) pad.drawSurface(0);
-    active.moving = false;
-    // Between bursts wake only for a timer tick, a new burst, or the end.
-    timeout = setTimeout(render, Math.max(1, Math.min(1000 - elapsed % 1000, active.interval - phase, active.duration - elapsed)));
+    // Hold the new position until the next nudge, then travel back. Even
+    // the one-second setting has a distinct stationary part of each cycle.
+    const progress = Math.min(phase / burstMs, 1);
+    const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+    const position = cycle % 2 === 0 ? eased : 1 - eased;
+    if (active.position !== position) {
+      pad.drawSurface(active.method, position);
+      active.position = position;
+    }
+    if (progress < 1) {
+      frame = requestAnimationFrame(render);
+      return;
+    }
   }
+  // Between nudges wake only for a timer tick, the next nudge, or the end.
+  timeout = setTimeout(render, Math.max(1, Math.min(1000 - elapsed % 1000, active.interval - phase, active.duration - elapsed)));
 }
 
 function start(test, trigger) {
   if (active) return;
   const minutes = Number(settings.elements.duration.value);
   const seconds = Number(settings.elements.interval.value);
+  const method = settings.elements.method.value;
+  const vibrating = method === 'vibrate';
   active = {
-    start: performance.now(), interval: test ? 2000 : seconds * 1000,
+    start: performance.now(), interval: test ? 1000 : seconds * 1000,
     duration: test ? testMs : (minutes ? minutes * 60000 : Infinity),
-    moving: true, test, trigger
+    method, position: null, lastPulse: -1, test, trigger
   };
   sessionNumber++;
   notice.textContent = '';
+  document.querySelector('.tracking-area').hidden = vibrating;
+  document.querySelector('#vibrationPlacement').hidden = !vibrating;
+  document.querySelector('#activeTitle').textContent = vibrating ? 'Place the phone beside the mouse' : 'Place the sensor on the pad';
   document.querySelector('#sessionLabel').textContent = test ? 'Sensor test' : 'Jiggling';
-  document.querySelector('#cadence').textContent = test ? 'Watch your PC pointer for small movements.' : 'One nudge every ' + seconds + ' seconds';
+  document.querySelector('#cadence').textContent = test ? 'Watch your PC pointer for a nudge every second.' : (seconds === 1 ? 'One nudge every second' : 'One nudge every ' + seconds + ' seconds');
   document.querySelector('#stopLabel').textContent = test ? 'End test' : 'Stop jiggling';
   home.hidden = true;
   session.hidden = false;
@@ -146,9 +194,16 @@ document.addEventListener('keydown', event => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) suspend(); });
 window.addEventListener('pagehide', suspend);
-window.addEventListener('resize', () => active ? pad.drawSurface(0) : pad.drawPreview());
+window.addEventListener('resize', () => {
+  if (!active) updatePlacement();
+  else if (active.method !== 'vibrate') pad.drawSurface(active.method, active.position);
+});
+const hasVibration = supportsVibration();
+document.querySelector('#vibrateOption').hidden = !hasVibration;
+settings.querySelector('[value="vibrate"]').disabled = !hasVibration;
+document.querySelector('#vibrationGuide').hidden = !hasVibration;
 loadSettings();
-pad.drawPreview();
+updatePlacement();
 
 if (window.isSecureContext && /^https?:$/.test(location.protocol) && !window.MousejigPower && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

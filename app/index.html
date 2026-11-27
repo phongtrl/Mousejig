@@ -22,18 +22,29 @@
     </header>
     <section class="intro" aria-labelledby="homeTitle">
       <h1 id="homeTitle">Motion pad<span aria-hidden="true">.</span></h1>
-      <p>Rest your mouse on the screen to give your PC pointer a nudge.</p>
+      <p>Choose a movement and test it with your mouse.</p>
     </section>
     <section class="preview" aria-label="Mouse placement and sensor test">
       <canvas id="previewCanvas" aria-label="Mouse resting with its optical sensor over the middle of the pad" role="img"></canvas>
+      <p id="vibrationPreview" class="placement" hidden>Rest the mouse on its usual pad. Touch the side of the mouse with the edge of your phone.</p>
       <div class="preview-footer"><span class="status"><i></i> Ready</span>
         <button id="test" class="test" type="button">Test my mouse <span aria-hidden="true">↗</span></button>
       </div>
     </section>
     <form id="settings">
       <fieldset>
+        <legend>Movement</legend>
+        <div class="segments">
+          <label><input type="radio" name="method" value="grain" checked><span>Fine grain</span></label>
+          <label><input type="radio" name="method" value="bars"><span>Wide bars</span></label>
+          <label id="vibrateOption" hidden><input type="radio" name="method" value="vibrate" disabled><span>Vibrate</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
         <legend>Move every</legend>
         <div class="segments">
+          <label><input type="radio" name="interval" value="1"><span>1 sec</span></label>
+          <label><input type="radio" name="interval" value="5"><span>5 sec</span></label>
           <label><input type="radio" name="interval" value="10"><span>10 sec</span></label>
           <label><input type="radio" name="interval" value="30" checked><span>30 sec</span></label>
           <label><input type="radio" name="interval" value="60"><span>60 sec</span></label>
@@ -58,6 +69,7 @@
     </div>
     <h1 id="activeTitle" tabindex="-1">Place the sensor on the pad</h1>
     <div class="tracking-area"><canvas id="surface" role="img" aria-label="Moving textured surface for the optical sensor"></canvas></div>
+    <p id="vibrationPlacement" class="placement" hidden>Keep the sensor on the mouse pad and the phone touching the side of the mouse.</p>
     <p id="cadence"></p>
     <p id="powerHint" hidden>Keep your phone’s display awake for this session.</p>
     <button class="stop" id="stop" type="button"><span class="stop-icon" aria-hidden="true"></span> <span id="stopLabel">Stop jiggling</span></button>
@@ -66,11 +78,12 @@
   <dialog id="guide" aria-labelledby="guideTitle">
     <h2 id="guideTitle">Using the pad</h2>
     <ol>
-      <li><strong>Test your mouse.</strong> Lay the phone flat, tap “Test my mouse” and rest the mouse sensor over the textured area.</li>
-      <li><strong>Watch the PC pointer.</strong> It should move slightly during the eight-second test. If it stays still, turn up the phone brightness or try a different optical mouse.</li>
+      <li><strong>Test your mouse.</strong> Choose Fine grain, then tap “Test my mouse”. Lay the phone flat and rest the sensor over the moving pattern.</li>
+      <li><strong>Watch the PC pointer.</strong> The pattern shifts once a second for eight seconds. If the pointer stays still, increase the screen brightness and repeat with Wide bars. You can also try a single layer of thin paper over the screen if the pattern shows through.</li>
       <li><strong>Start a session.</strong> Pick an interval shorter than your PC’s idle timeout, choose a duration, then tap “Start jiggling”. Leave the app open.</li>
     </ol>
-    <p>Some laser and optical sensors cannot track a phone display.</p>
+    <p>Some sensors cannot track a phone display.</p>
+    <p id="vibrationGuide" hidden>With Vibrate, leave the mouse on its usual pad and rest the phone against its side. Use the test to see if each pulse moves the pointer.</p>
     <button id="closeGuide" class="primary" type="button">Got it</button>
   </dialog>
 </body>

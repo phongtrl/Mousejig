@@ -1,3 +1,5 @@
+import AudioToolbox
+import CoreHaptics
 import UIKit
 import WebKit
 
@@ -35,19 +37,27 @@ final class PadController: UIViewController, WKNavigationDelegate, WKScriptMessa
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         webView.configuration.userContentController.add(self, name: "power")
+        if CHHapticEngine.capabilitiesForHardware().supportsHaptics {
+            webView.configuration.userContentController.add(self, name: "pulse")
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "power")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "pulse")
         suspend()
     }
 
     func userContentController(_ controller: WKUserContentController,
                                didReceive message: WKScriptMessage) {
-        guard message.name == "power", message.frameInfo.isMainFrame,
-              let enabled = message.body as? Bool else { return }
-        UIApplication.shared.isIdleTimerDisabled = enabled && view.window?.windowScene?.activationState == .foregroundActive
+        guard message.frameInfo.isMainFrame, let enabled = message.body as? Bool else { return }
+        let foreground = view.window?.windowScene?.activationState == .foregroundActive
+        if message.name == "power" {
+            UIApplication.shared.isIdleTimerDisabled = enabled && foreground
+        } else if message.name == "pulse", enabled && foreground {
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        }
     }
 
     func suspend() {
