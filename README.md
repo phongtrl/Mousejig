@@ -2,6 +2,8 @@
 
 Mousejig turns an Android phone or iPhone into a moving surface for an optical mouse. Leave the mouse connected to your PC and rest its sensor on the phone. The app shifts a textured pattern a short distance and back at the interval you choose. Both native apps work offline.
 
+[Open Mousejig on your phone](https://phongtrl.github.io/Mousejig/app/)
+
 ## Try your mouse
 
 1. Put the phone flat next to the computer and tap **Test my mouse**.
@@ -31,6 +33,6 @@ The build workflow also compiles for iPhone and packages a simulator build. To u
 
 ## Home-screen web app
 
-The same interface in `app/` can be served over HTTPS. In Safari use **Share → Add to Home Screen**. In Android Chrome use **Install app** or **Add to home screen**. Allow the first online load to finish so the app can cache its files for offline sessions. Browser screen-wake support depends on the OS and browser version.
+Open the link above in your phone’s browser. In Safari use **Share → Add to Home Screen**. In Android Chrome use **Install app** or **Add to home screen**. Allow the first online load to finish so the app can cache its files for offline sessions. Browser screen-wake support depends on the OS and browser version.
 
 The native projects bundle `app/` directly. Each supplies its platform’s screen-awake control and releases it when the session stops or the app leaves the foreground.

@@ -15,6 +15,8 @@ let wakeLock = null;
 let sessionNumber = 0;
 
 function keepAwake(enabled) {
+  const hint = document.querySelector('#powerHint');
+  hint.hidden = true;
   if (window.MousejigPower) {
     window.MousejigPower.keepAwake(enabled);
   } else if (window.webkit?.messageHandlers?.power) {
@@ -22,9 +24,19 @@ function keepAwake(enabled) {
   } else if (enabled && navigator.wakeLock) {
     const id = sessionNumber;
     navigator.wakeLock.request('screen').then(lock => {
-      if (active && id === sessionNumber) wakeLock = lock;
-      else lock.release().catch(() => {});
-    }).catch(() => {});
+      if (active && id === sessionNumber) {
+        wakeLock = lock;
+        lock.addEventListener('release', () => {
+          if (active && id === sessionNumber) hint.hidden = false;
+        });
+      } else {
+        lock.release().catch(() => {});
+      }
+    }).catch(() => {
+      if (active && id === sessionNumber) hint.hidden = false;
+    });
+  } else if (enabled) {
+    hint.hidden = false;
   } else if (wakeLock) {
     wakeLock.release().catch(() => {});
     wakeLock = null;
