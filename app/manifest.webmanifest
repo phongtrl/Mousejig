@@ -1,0 +1,12 @@
+{
+  "id": "./",
+  "name": "Mousejig",
+  "short_name": "Mousejig",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f8f3",
+  "theme_color": "#f7f8f3",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
